@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Worker-Diagnose</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:#F5F4F1;color:#26211F;padding:18px;max-width:640px;margin:0 auto;line-height:1.5}
+  h1{font-size:1.1rem;color:#721315;margin-bottom:12px}
+  button{background:#721315;color:#fff;border:none;border-radius:10px;
+    padding:14px 18px;font-size:1rem;width:100%;margin-bottom:14px}
+  .box{background:#fff;border:1px solid #E6E2DD;border-radius:12px;padding:14px;margin-bottom:12px}
+  .box h2{font-size:.9rem;margin-bottom:6px}
+  .status{font-size:.85rem;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,monospace}
+  .ok{color:#1E6B32}.fail{color:#9A2A2A}.wait{color:#6E6862}
+</style>
+</head>
+<body>
+<h1>Worker-Diagnose (NCG Handyauszeit)</h1>
+<button id="start">Test starten</button>
+<div class="box"><h2>1 · Worker erreichbar (GET)</h2><div class="status wait" id="t1">wartet …</div></div>
+<div class="box"><h2>2 · Echte Anfrage (POST)</h2><div class="status wait" id="t2">wartet …</div></div>
+
+<script>
+(function(){
+  "use strict";
+  var URL = "https://ncg-handypause.timmw4130.workers.dev";
+  function set(id,cls,txt){var e=document.getElementById(id);e.className="status "+cls;e.textContent=txt;}
+
+  async function testGet(){
+    set("t1","wait","läuft …");
+    try{
+      var r = await fetch(URL, {method:"GET"});
+      var t = await r.text();
+      set("t1","ok","HTTP "+r.status+"\n"+t.slice(0,200));
+    }catch(e){
+      set("t1","fail","FEHLER: "+(e&&e.name)+" — "+(e&&e.message));
+    }
+  }
+
+  async function testPost(){
+    set("t2","wait","läuft …");
+    try{
+      var r = await fetch(URL, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({messages:[{role:"user",content:"Testfrage: Was ist die Handyauszeit?"}]})
+      });
+      var t = await r.text();
+      set("t2", r.ok ? "ok" : "fail",
+        "HTTP "+r.status+"\n"+t.slice(0,400));
+    }catch(e){
+      set("t2","fail","FEHLER (Anfrage kam nicht durch):\n"+(e&&e.name)+" — "+(e&&e.message));
+    }
+  }
+
+  document.getElementById("start").addEventListener("click", async function(){
+    this.disabled = true;
+    await testGet();
+    await testPost();
+    this.disabled = false;
+  });
+})();
+</script>
+</body>
+</html>
